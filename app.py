@@ -541,7 +541,7 @@ def send_commands_to_tv(command):
 
     # Here we will map recognized gestures to TV commands
     command_map = {
-        'Close': 'menu',        # Example: 'Closed hand' gesture increases open menu
+        'Left': 'menu',        # Example: 'Closed hand' gesture increases open menu
         'Open': 'enter',       # Example: 'Open hand' gesture goes to select/enter
     }
     # Find mapped method name for this gesture
