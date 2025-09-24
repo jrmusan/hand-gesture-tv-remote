@@ -4,6 +4,7 @@ import csv
 import copy
 import argparse
 import itertools
+from pathlib import Path
 from collections import Counter
 from collections import deque
 
@@ -14,6 +15,25 @@ import mediapipe as mp
 from utils import CvFpsCalc
 from model import KeyPointClassifier
 from model import PointHistoryClassifier
+
+from samsungtvws import SamsungTVWS
+
+# Set your TV's IP address
+# The IP can be read from a local ignored file named '.samsungtv_ip'.
+# Create '.samsungtv_ip' with the TV IP (one line) to override the fallback.
+ip_file = Path('.samsungtv_ip')
+if ip_file.exists():
+    ip = ip_file.read_text().strip()
+    if not ip:
+        raise SystemExit("'.samsungtv_ip' is empty — add your TV IP to the file.")
+else:
+    raise SystemExit("Please create a file named '.samsungtv_ip' with your TV's IP address.")
+token_file = ".samsungtv.token"
+
+print(f"Using TV IP: {ip}")
+
+# Connect to your TV
+tv = SamsungTVWS(ip, port=8002, token_file=token_file)
 
 
 def get_args():
