@@ -534,7 +534,7 @@ def draw_info_text(image, brect, handedness, hand_sign_text,
     info_text = handedness.classification[0].label[0:]
 
     # Now that we have the hand sign text, send corresponding command to TV
-    # send_commands_to_tv(hand_sign_text)
+    send_commands_to_tv(hand_sign_text)
 
     if hand_sign_text != "":
         info_text = info_text + ':' + hand_sign_text
@@ -557,6 +557,7 @@ def send_commands_to_tv(command):
     command_map = {
         'Close': 'home',        # Example: 'Closed hand' gesture increases open menu
         'Open': 'enter',       # Example: 'Open hand' gesture goes to select/enter
+        'PointRight': 'right',  # Pointing right gesture to navigate right
     }
     # Debounce logic: require the same gesture for a couple consecutive frames
     state = _tv_command_state
