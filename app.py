@@ -518,6 +518,10 @@ def draw_info_text(image, brect, handedness, hand_sign_text,
                  (0, 0, 0), -1)
 
     info_text = handedness.classification[0].label[0:]
+
+    # Now that we have the hand sign text, send corresponding command to TV
+    send_commands_to_tv(info_text)
+
     if hand_sign_text != "":
         info_text = info_text + ':' + hand_sign_text
     cv.putText(image, info_text, (brect[0] + 5, brect[1] - 4),
@@ -531,6 +535,33 @@ def draw_info_text(image, brect, handedness, hand_sign_text,
                    cv.LINE_AA)
 
     return image
+
+
+def send_commands_to_tv(command):
+
+    # Here we will map recognized gestures to TV commands
+    command_map = {
+        'Close': 'menu',        # Example: 'Closed hand' gesture increases open menu
+        'Open': 'enter',       # Example: 'Open hand' gesture goes to select/enter
+    }
+    # Find mapped method name for this gesture
+    method_name = command_map.get(command)
+    if not method_name:
+        # No mapping for this command
+        print(f"No TV command mapped for gesture '{command}'")
+        return
+
+    try:   
+        # Fancy way to call the method by name (if it exists)
+        shortcuts = tv.shortcuts()
+        action = getattr(shortcuts, method_name, None)
+        if callable(action):
+            action()
+            print(f"Sent command: {command} -> {method_name}()")
+        else:
+            print(f"TV shortcuts object has no method '{method_name}'")
+    except Exception as e:
+        print(f"Failed to send command '{command}': {e}")
 
 
 def draw_point_history(image, point_history):
