@@ -558,6 +558,7 @@ def send_commands_to_tv(command):
         'Close': 'home',        # Example: 'Closed hand' gesture increases open menu
         'Open': 'enter',       # Example: 'Open hand' gesture goes to select/enter
         'PointRight': 'right',  # Pointing right gesture to navigate right
+        'PointDown': 'down',    # Pointing down gesture to navigate down
     }
     # Debounce logic: require the same gesture for a couple consecutive frames
     state = _tv_command_state
