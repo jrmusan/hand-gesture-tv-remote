@@ -1,80 +1,88 @@
-def main():
-    args = get_args()
+from app import pre_process_landmark, calc_landmark_list
 
-    cap = cv.VideoCapture(args.device)
-    cap.set(cv.CAP_PROP_FRAME_WIDTH, args.width)
-    cap.set(cv.CAP_PROP_FRAME_HEIGHT, args.height)
+import cv2 as cv
+import copy
+import csv
+import mediapipe as mp
+import itertools
+from pathlib import Path
 
-    # Load mediapipe
-    mp_hands = mp.solutions.hands
-    hands = mp_hands.Hands(
-        static_image_mode=args.use_static_image_mode,
-        max_num_hands=1,
-        min_detection_confidence=args.min_detection_confidence,
-        min_tracking_confidence=args.min_tracking_confidence,
-    )
+# === SETTINGS ===
+gesture_id = 3   # pick the numeric ID for your new gesture (check keypoint_classifier_label.csv)
+gesture_name = "PointRight"  # for your own tracking
+num_samples = 500    # how many frames to collect
 
-    # Ask which gesture to record
-    gesture_number = int(input("Enter gesture number label (0–9): "))
-    target_samples = int(input("How many samples do you want to record? "))
-    print(f"Recording gesture {gesture_number} for {target_samples} samples...")
+# Resolve csv_path relative to repo root (two levels up from this utils file)
+# so the script works when run from any CWD.
+csv_path = Path(__file__).resolve().parents[1] / "model" / "keypoint_classifier" / "keypoint.csv"
 
-    cvFpsCalc = CvFpsCalc(buffer_len=10)
+# === Mediapipe init ===
+mp_hands = mp.solutions.hands
+hands = mp_hands.Hands(
+    static_image_mode=False,
+    max_num_hands=1,
+    min_detection_confidence=0.7,
+    min_tracking_confidence=0.5,
+)
+mp_drawing = mp.solutions.drawing_utils
 
-    sample_count = 0
 
-    while True:
-        fps = cvFpsCalc.get()
+# Camera preparation 
+cap = cv.VideoCapture(1)
+cap.set(cv.CAP_PROP_FRAME_WIDTH, 960)
+cap.set(cv.CAP_PROP_FRAME_HEIGHT, 540)
 
+counter = 0
+
+# Ensure parent directory exists
+csv_path.parent.mkdir(parents=True, exist_ok=True)
+
+with csv_path.open("a", newline="") as f:
+    writer = csv.writer(f)
+
+    while cap.isOpened() and counter < num_samples:
+
+        # Camera capture #####################################################
         ret, image = cap.read()
         if not ret:
             break
-        image = cv.flip(image, 1)
+        image = cv.flip(image, 1)  # Mirror display
         debug_image = copy.deepcopy(image)
 
+        # Detection implementation #############################################################
         image = cv.cvtColor(image, cv.COLOR_BGR2RGB)
+
         image.flags.writeable = False
         results = hands.process(image)
         image.flags.writeable = True
 
+         #  ####################################################################
         if results.multi_hand_landmarks is not None:
-            for hand_landmarks in results.multi_hand_landmarks:
-                brect = calc_bounding_rect(debug_image, hand_landmarks)
+            for hand_landmarks, handedness in zip(results.multi_hand_landmarks,
+                                                  results.multi_handedness):
+     
+                # Landmark calculation
                 landmark_list = calc_landmark_list(debug_image, hand_landmarks)
-                pre_processed_landmark_list = pre_process_landmark(landmark_list)
 
-                if sample_count < target_samples:
-                    logging_csv_single(gesture_number, pre_processed_landmark_list)
-                    sample_count += 1
-                    print(f"Saved sample {sample_count}/{target_samples}", end="\r")
+                # Conversion to relative coordinates / normalized coordinates
+                pre_processed_landmark_list = pre_process_landmark(
+                    landmark_list)
 
-                debug_image = draw_bounding_rect(True, debug_image, brect)
-                debug_image = draw_landmarks(debug_image, landmark_list)
+                # Add gesture_id in front
+                row = [gesture_id, *pre_processed_landmark_list]
+                writer.writerow(row)
 
-        debug_image = draw_info(debug_image, fps, 1, gesture_number)
-        cv.putText(debug_image, f"Samples: {sample_count}/{target_samples}",
-                   (10, 60), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                counter += 1
 
-        cv.imshow('Data Collection', debug_image)
+                # Draw for feedback
+                mp_drawing.draw_landmarks(image, hand_landmarks, mp_hands.HAND_CONNECTIONS)
 
-        key = cv.waitKey(10)
-        if key == 27:  # ESC to stop early
+        cv.putText(image, f"Gesture: {gesture_name} ({counter}/{num_samples})",
+                    (10, 30), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+
+        cv.imshow("Capture", image)
+        if cv.waitKey(1) & 0xFF == ord("q"):
             break
 
-        if sample_count >= target_samples:
-            print("\nFinished recording.")
-            break
-
-    cap.release()
-    cv.destroyAllWindows()
-
-
-def logging_csv_single(number, landmark_list):
-    csv_path = 'model/keypoint_classifier/keypoint.csv'
-    with open(csv_path, 'a', newline="") as f:
-        writer = csv.writer(f)
-        writer.writerow([number, *landmark_list])
-
-
-if __name__ == '__main__':
-    main()
+cap.release()
+cv.destroyAllWindows()
