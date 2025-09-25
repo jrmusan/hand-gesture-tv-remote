@@ -18,6 +18,8 @@ from model import PointHistoryClassifier
 
 from samsungtvws import SamsungTVWS
 
+# ======= Logic for interfacing with the TV =======
+
 # Set your TV's IP address
 # The IP can be read from a local ignored file named '.samsungtv_ip'.
 # Create '.samsungtv_ip' with the TV IP (one line) to override the fallback.
@@ -30,9 +32,7 @@ else:
     raise SystemExit("Please create a file named '.samsungtv_ip' with your TV's IP address.")
 token_file = ".samsungtv.token"
 
-print(f"Using TV IP: {ip}")
-
-# Connect to your TV
+print(f"Using TV IP: {ip}, connecting...")
 tv = SamsungTVWS(ip, port=8002, token_file=token_file)
 
 # State used to debounce TV commands so we don't spam the TV on every frame
@@ -48,6 +48,8 @@ _tv_command_state = {
     'hold_frames_after_send': 8,
     'hold_counter': 0,
 }
+
+# ======= Logic for interfacing with the TV =======
 
 
 def get_args():
@@ -534,7 +536,7 @@ def draw_info_text(image, brect, handedness, hand_sign_text,
     info_text = handedness.classification[0].label[0:]
 
     # Now that we have the hand sign text, send corresponding command to TV
-    send_commands_to_tv(hand_sign_text)
+    # send_commands_to_tv(hand_sign_text)
 
     if hand_sign_text != "":
         info_text = info_text + ':' + hand_sign_text
@@ -559,6 +561,7 @@ def send_commands_to_tv(command):
         'Open': 'enter',       # Example: 'Open hand' gesture goes to select/enter
         'PointRight': 'right',  # Pointing right gesture to navigate right
         'PointDown': 'down',    # Pointing down gesture to navigate down
+        'PointCenter': "power",  # Pointing center gesture to toggle power
     }
     # Debounce logic: require the same gesture for a couple consecutive frames
     state = _tv_command_state
@@ -589,10 +592,10 @@ def send_commands_to_tv(command):
         shortcuts = tv.shortcuts()
         action = getattr(shortcuts, method_name, None)
         if callable(action):
+            print(f"Sending command: {command} -> {method_name}()")
             action()
             state['last_sent'] = command
             state['hold_counter'] = state['hold_frames_after_send']
-            print(f"Sent command: {command} -> {method_name}()")
         else:
             print(f"TV shortcuts object has no method '{method_name}'")
     except Exception as e:

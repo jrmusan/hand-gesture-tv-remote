@@ -11,6 +11,7 @@ The table below shows the gestures currently mapped to TV shortcut methods (thes
 | Open | enter | `tv.shortcuts().enter()` | Select / Enter |
 | PointRight | right | `tv.shortcuts().right()` | Navigate right |
 | PointDown | down | `tv.shortcuts().down()` | Navigate down |
+| PointCenter | power | `tv.shortcuts().power()` | Toggle power |
 
 Notes:
 - The app only sends a command when the gesture is stable for a couple consecutive frames (debounce). See `_tv_command_state` in `app.py` to tune sensitivity.
