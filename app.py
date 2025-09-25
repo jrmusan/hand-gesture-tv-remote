@@ -560,6 +560,7 @@ def send_commands_to_tv(command):
         'PointRight': 'right',  # Pointing right gesture to navigate right
         'PointDown': 'down',    # Pointing down gesture to navigate down
         'PointCenter': "power",  # Pointing center gesture to toggle power
+        'PointLeft': 'left',    # Pointing left gesture to navigate left
     }
     # Debounce logic: require the same gesture for a couple consecutive frames
     state = _tv_command_state

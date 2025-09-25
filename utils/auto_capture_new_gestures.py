@@ -8,9 +8,9 @@ import itertools
 from pathlib import Path
 
 # === SETTINGS ===
-gesture_id = 3   # pick the numeric ID for your new gesture (check keypoint_classifier_label.csv)
-gesture_name = "PointRight"  # for your own tracking
-num_samples = 500    # how many frames to collect
+gesture_id = 5   # pick the numeric ID for your new gesture (check keypoint_classifier_label.csv)
+gesture_name = "PointLeft"  # for your own tracking
+num_samples = 1500    # how many frames to collect
 
 # Resolve csv_path relative to repo root (two levels up from this utils file)
 # so the script works when run from any CWD.
