@@ -4,6 +4,7 @@ import csv
 import copy
 import argparse
 import itertools
+from pathlib import Path
 from collections import Counter
 from collections import deque
 
@@ -14,6 +15,39 @@ import mediapipe as mp
 from utils import CvFpsCalc
 from model import KeyPointClassifier
 from model import PointHistoryClassifier
+
+from samsungtvws import SamsungTVWS
+
+# Set your TV's IP address
+# The IP can be read from a local ignored file named '.samsungtv_ip'.
+# Create '.samsungtv_ip' with the TV IP (one line) to override the fallback.
+ip_file = Path('.samsungtv_ip')
+if ip_file.exists():
+    ip = ip_file.read_text().strip()
+    if not ip:
+        raise SystemExit("'.samsungtv_ip' is empty — add your TV IP to the file.")
+else:
+    raise SystemExit("Please create a file named '.samsungtv_ip' with your TV's IP address.")
+token_file = ".samsungtv.token"
+
+print(f"Using TV IP: {ip}")
+
+# Connect to your TV
+tv = SamsungTVWS(ip, port=8002, token_file=token_file)
+
+# State used to debounce TV commands so we don't spam the TV on every frame
+# last_detected: last gesture label seen
+# consecutive: how many consecutive frames we've seen that same label
+# last_sent: last gesture we actually sent to the TV
+# hold_frames_after_send: how many frames to suppress sending after a send
+# hold_counter: current remaining hold frames
+_tv_command_state = {
+    'last_detected': None,
+    'consecutive': 0,
+    'last_sent': None,
+    'hold_frames_after_send': 8,
+    'hold_counter': 0,
+}
 
 
 def get_args():
@@ -498,6 +532,10 @@ def draw_info_text(image, brect, handedness, hand_sign_text,
                  (0, 0, 0), -1)
 
     info_text = handedness.classification[0].label[0:]
+
+    # Now that we have the hand sign text, send corresponding command to TV
+    send_commands_to_tv(hand_sign_text)
+
     if hand_sign_text != "":
         info_text = info_text + ':' + hand_sign_text
     cv.putText(image, info_text, (brect[0] + 5, brect[1] - 4),
@@ -511,6 +549,54 @@ def draw_info_text(image, brect, handedness, hand_sign_text,
                    cv.LINE_AA)
 
     return image
+
+
+def send_commands_to_tv(command):
+
+    # Here we will map recognized gestures to TV commands
+    command_map = {
+        'Close': 'home',        # Example: 'Closed hand' gesture increases open menu
+        'Open': 'enter',       # Example: 'Open hand' gesture goes to select/enter
+        'PointRight': 'right',  # Pointing right gesture to navigate right
+        'PointDown': 'down',    # Pointing down gesture to navigate down
+    }
+    # Debounce logic: require the same gesture for a couple consecutive frames
+    state = _tv_command_state
+
+    # If we are in hold period after sending, decrement and skip
+    if state['hold_counter'] > 0:
+        state['hold_counter'] -= 1
+        return
+
+    # If same as last detected, increment consecutive count, otherwise reset
+    if state['last_detected'] == command:
+        state['consecutive'] += 1
+    else:
+        state['last_detected'] = command
+        state['consecutive'] = 1
+
+    # Only send when we've seen the same gesture for at least 2 consecutive frames
+    if state['consecutive'] < 2:
+        return
+
+    method_name = command_map.get(command)
+    if not method_name:
+        # No mapping for this command
+        print(f"No TV command mapped for gesture '{command}'")
+        return
+
+    try:
+        shortcuts = tv.shortcuts()
+        action = getattr(shortcuts, method_name, None)
+        if callable(action):
+            action()
+            state['last_sent'] = command
+            state['hold_counter'] = state['hold_frames_after_send']
+            print(f"Sent command: {command} -> {method_name}()")
+        else:
+            print(f"TV shortcuts object has no method '{method_name}'")
+    except Exception as e:
+        print(f"Failed to send command '{command}': {e}")
 
 
 def draw_point_history(image, point_history):
