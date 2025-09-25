@@ -585,10 +585,6 @@ def send_commands_to_tv(command):
         print(f"No TV command mapped for gesture '{command}'")
         return
 
-    # If this is the same as the last sent command, don't resend
-    if state['last_sent'] == command:
-        return
-
     try:
         shortcuts = tv.shortcuts()
         action = getattr(shortcuts, method_name, None)
