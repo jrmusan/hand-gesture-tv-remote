@@ -58,16 +58,6 @@ def get_args():
     parser.add_argument("--device", type=int, default=0)
     parser.add_argument("--width", help='cap width', type=int, default=960)
     parser.add_argument("--height", help='cap height', type=int, default=540)
-
-    parser.add_argument("--min_detection_confidence",
-                        help='min_detection_confidence',
-                        type=float,
-                        default=0.7)
-    parser.add_argument("--min_tracking_confidence",
-                        help='min_tracking_confidence',
-                        type=int,
-                        default=0.5)
-
     args = parser.parse_args()
 
     return args
@@ -81,8 +71,6 @@ def main():
     cap_width = args.width
     cap_height = args.height
 
-    min_detection_confidence = args.min_detection_confidence
-    min_tracking_confidence = args.min_tracking_confidence
 
     use_brect = True
 
@@ -96,8 +84,7 @@ def main():
     hands = mp_hands.Hands(
         static_image_mode=False,
         max_num_hands=1,
-        min_detection_confidence=min_detection_confidence,
-        min_tracking_confidence=min_tracking_confidence,
+        min_detection_confidence=0.7 # Minimum confidence value ([0.0, 1.0]) from the hand detection model for the detection to be considered successful.
     )
 
     keypoint_classifier = KeyPointClassifier()
@@ -534,7 +521,7 @@ def draw_info_text(image, brect, handedness, hand_sign_text,
     info_text = handedness.classification[0].label[0:]
 
     # Now that we have the hand sign text, send corresponding command to TV
-    # send_commands_to_tv(hand_sign_text)
+    send_commands_to_tv(hand_sign_text)
 
     if hand_sign_text != "":
         info_text = info_text + ':' + hand_sign_text

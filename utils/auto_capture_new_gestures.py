@@ -19,10 +19,8 @@ csv_path = Path(__file__).resolve().parents[1] / "model" / "keypoint_classifier"
 # === Mediapipe init ===
 mp_hands = mp.solutions.hands
 hands = mp_hands.Hands(
-    static_image_mode=False,
     max_num_hands=1,
-    min_detection_confidence=0.7,
-    min_tracking_confidence=0.5,
+    min_detection_confidence=0.7, # Minimum confidence value ([0.0, 1.0]) from the hand detection model for the detection to be considered successful.
 )
 mp_drawing = mp.solutions.drawing_utils
 
